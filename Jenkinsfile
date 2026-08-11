@@ -1,5 +1,11 @@
+
 pipeline {
     agent any
+
+    tools {
+        jdk 'JDK8'
+        maven 'Maven3'
+    }
 
     stages {
 
@@ -30,15 +36,35 @@ pipeline {
                 bat 'mvn package'
             }
         }
+
+        stage('Deploy to Tomcat') {
+            steps {
+                echo 'Deploying application to Tomcat...'
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'tomcat-credentials',
+                        usernameVariable: 'TOMCAT_USER',
+                        passwordVariable: 'TOMCAT_PASS'
+                    )
+                ]) {
+                    bat '''
+                    for %%f in (target\\*.war) do curl --upload-file "%%f" -u %TOMCAT_USER%:%TOMCAT_PASS% "http://localhost:8081/manager/text/deploy?path=/jenkins-java-app&update=true"
+                    '''
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo 'CI Pipeline completed successfully!'
+            echo 'CI/CD Pipeline completed successfully!'
         }
 
         failure {
-            echo 'CI Pipeline failed!'
+            echo 'CI/CD Pipeline failed!'
         }
     }
 }
+       
+           
